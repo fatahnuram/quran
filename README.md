@@ -1,6 +1,6 @@
 # quran
 
-Self-sufficient HTTP server serving Quran (and Indonesia Translation) via REST API
+Minimal HTTP server serving Quran (and Indonesia Translation) via REST API
 
 ## Quran data
 
