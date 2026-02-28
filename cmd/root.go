@@ -25,7 +25,7 @@ var (
 )
 
 func init() {
-	rootCmd.Flags().IntVarP(&port, "port", "p", 8080, "HTTP server port")
+	rootCmd.Flags().IntVarP(&port, "port", "p", 8087, "HTTP server port")
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
 }
 
