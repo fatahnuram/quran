@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -28,8 +30,16 @@ type AyatT struct {
 	ID      string `json:"id"`
 }
 
+const (
+	DB_PATH           = "datasource/quran.sqlite"
+	OUTPUT_SURAH_PATH = "surah.csv"
+	OUTPUT_AYAT_PATH  = "ayat.csv"
+)
+
+// This script export current sqlite database
+// into CSV format
 func main() {
-	db, err := sql.Open("sqlite3", "file:datasource/quran.sqlite")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s", DB_PATH))
 	if err != nil {
 		log.Fatalf("failed to open sqlite db: %v", err)
 	}
@@ -64,32 +74,54 @@ func main() {
 	}
 	defer surahrows.Close()
 
-	var surah []SurahT
+	var surahs []SurahT
 	for surahrows.Next() {
 		var s SurahT
 		err = surahrows.Scan(&s.No, &s.NameAR, &s.NameID, &s.AyatCount)
 		if err != nil {
 			log.Fatalf("failed to parse surah: %v", err)
 		}
-		surah = append(surah, s)
+		surahs = append(surahs, s)
 	}
-	fmt.Printf("surah: %#v\n", surah)
 
-	// show surah
+	// show ayat
 	ayatrows, err := db.Query(`SELECT surah, ayat, arab, terjemahan FROM table_ayat`)
 	if err != nil {
 		log.Fatalf("failed to query ayat: %v", err)
 	}
 	defer ayatrows.Close()
 
-	var ayat []AyatT
+	var ayats []AyatT
 	for ayatrows.Next() {
 		var s AyatT
 		err = ayatrows.Scan(&s.SurahNo, &s.AyatNo, &s.AR, &s.ID)
 		if err != nil {
 			log.Fatalf("failed to parse ayat: %v", err)
 		}
-		ayat = append(ayat, s)
+		ayats = append(ayats, s)
 	}
-	fmt.Printf("ayat: %#v\n", ayat)
+
+	// export surah to csv
+	var surahrecords [][]string
+	for _, surah := range surahs {
+		rec := make([]string, 4)
+		rec[0] = surah.No
+		rec[1] = surah.NameAR
+		rec[2] = surah.NameID
+		rec[3] = surah.AyatCount
+
+		surahrecords = append(surahrecords, rec)
+	}
+
+	surahfile, err := os.Create(OUTPUT_SURAH_PATH)
+	if err != nil {
+		log.Fatalf("failed to create csv file %s: %v", OUTPUT_SURAH_PATH, err)
+	}
+	defer surahfile.Close()
+
+	ws := csv.NewWriter(surahfile)
+	err = ws.WriteAll(surahrecords)
+	if err != nil {
+		log.Fatalf("failed to write csv file %s: %v", OUTPUT_SURAH_PATH, err)
+	}
 }
