@@ -124,4 +124,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to write csv file %s: %v", OUTPUT_SURAH_PATH, err)
 	}
+
+	// export ayat to csv
+	var ayatrecords [][]string
+	for _, ayat := range ayats {
+		rec := make([]string, 4)
+		rec[0] = ayat.SurahNo
+		rec[1] = ayat.AyatNo
+		rec[2] = ayat.AR
+		rec[3] = ayat.ID
+
+		ayatrecords = append(ayatrecords, rec)
+	}
+
+	ayatfile, err := os.Create(OUTPUT_AYAT_PATH)
+	if err != nil {
+		log.Fatalf("failed to create csv file %s: %v", OUTPUT_AYAT_PATH, err)
+	}
+	defer ayatfile.Close()
+
+	wa := csv.NewWriter(ayatfile)
+	err = wa.WriteAll(ayatrecords)
+	if err != nil {
+		log.Fatalf("failed to write csv file %s: %v", OUTPUT_AYAT_PATH, err)
+	}
 }
