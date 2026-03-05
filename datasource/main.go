@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -31,9 +32,9 @@ type AyatT struct {
 }
 
 const (
-	DB_PATH           = "datasource/quran.sqlite"
-	OUTPUT_SURAH_PATH = "surah.csv"
-	OUTPUT_AYAT_PATH  = "ayat.csv"
+	DB_PATH               = "datasource/quran.sqlite"
+	OUTPUT_ALL_SURAH_PATH = "surah.csv"
+	OUTPUT_PER_SURAH_PATH = "surah-%s.csv"
 )
 
 // This script export current sqlite database
@@ -113,39 +114,58 @@ func main() {
 		surahrecords = append(surahrecords, rec)
 	}
 
-	surahfile, err := os.Create(OUTPUT_SURAH_PATH)
+	surahfile, err := os.Create(OUTPUT_ALL_SURAH_PATH)
 	if err != nil {
-		log.Fatalf("failed to create csv file %s: %v", OUTPUT_SURAH_PATH, err)
+		log.Fatalf("failed to create csv file %s: %v", OUTPUT_ALL_SURAH_PATH, err)
 	}
 	defer surahfile.Close()
 
 	ws := csv.NewWriter(surahfile)
 	err = ws.WriteAll(surahrecords)
 	if err != nil {
-		log.Fatalf("failed to write csv file %s: %v", OUTPUT_SURAH_PATH, err)
+		log.Fatalf("failed to write csv file %s: %v", OUTPUT_ALL_SURAH_PATH, err)
 	}
 
 	// export ayat to csv
-	var ayatrecords [][]string
-	for _, ayat := range ayats {
+	index := 0
+	for _, surah := range surahs {
+		ayatnumber, err := strconv.Atoi(surah.AyatCount)
+		if err != nil {
+			log.Fatalf("failed to parse ayat count for surah %s: %v", surah.NameAR, err)
+		}
+		endindex := index + ayatnumber
+
+		ayatsurah := ayats[index:endindex]
+		err = writeToCsvAyat(ayatsurah)
+		if err != nil {
+			log.Fatalf("failed to write csv file: %v", err)
+		}
+		index = endindex
+	}
+}
+
+func writeToCsvAyat(array []AyatT) error {
+	var records [][]string
+	for _, ayat := range array {
 		rec := make([]string, 4)
 		rec[0] = ayat.SurahNo
 		rec[1] = ayat.AyatNo
 		rec[2] = ayat.AR
 		rec[3] = ayat.ID
-
-		ayatrecords = append(ayatrecords, rec)
+		records = append(records, rec)
 	}
 
-	ayatfile, err := os.Create(OUTPUT_AYAT_PATH)
+	filename := fmt.Sprintf(OUTPUT_PER_SURAH_PATH, array[0].SurahNo)
+	ayatfile, err := os.Create(filename)
 	if err != nil {
-		log.Fatalf("failed to create csv file %s: %v", OUTPUT_AYAT_PATH, err)
+		return fmt.Errorf("failed to create csv file %s: %v", filename, err)
 	}
 	defer ayatfile.Close()
 
 	wa := csv.NewWriter(ayatfile)
-	err = wa.WriteAll(ayatrecords)
+	err = wa.WriteAll(records)
 	if err != nil {
-		log.Fatalf("failed to write csv file %s: %v", OUTPUT_AYAT_PATH, err)
+		return fmt.Errorf("failed to write csv file %s: %v", filename, err)
 	}
+	return nil
 }
