@@ -33,7 +33,7 @@ run: start
 .PHONY: clean
 # Clean working dir from prev build result
 clean:
-	rm -f ./quran
+	rm -f ./quran *.csv
 
 
 .PHONY: help
